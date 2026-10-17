@@ -45,18 +45,21 @@ body{
 }
 @keyframes flicker{0%,100%{opacity:.85}48%{opacity:.8}50%{opacity:.95}52%{opacity:.82}}
 .stage{display:flex;flex-direction:column;align-items:center;gap:12px;padding:14px}
-header{display:flex;align-items:baseline;gap:16px}
+header{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;justify-content:center}
 h1{
   font-family:'Bungee',cursive;font-size:26px;letter-spacing:2px;color:#d6ffb8;
   text-shadow:0 0 8px rgba(166,255,61,.7),0 0 30px rgba(166,255,61,.35),2px 2px 0 #0a1f08;
 }
 header .sub{color:var(--uidim);font-size:18px;letter-spacing:3px}
-#btnSound{
+.hudCtrls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center}
+.hudBtn{
   font-family:'VT323',monospace;font-size:18px;letter-spacing:2px;
   color:var(--uidim);background:transparent;border:1px solid #23402b;
   padding:2px 10px;cursor:pointer;border-radius:4px;
 }
-#btnSound:hover{color:var(--uifg);border-color:var(--uidim)}
+.hudBtn:hover{color:var(--uifg);border-color:var(--uidim)}
+.hudBtn.sq{padding:2px 9px;font-size:19px}
+.hudInd{font-size:18px;letter-spacing:2px;color:var(--uidim);border:1px dashed #23402b;border-radius:4px;padding:2px 8px}
 .cabinet{display:flex;align-items:stretch;gap:14px}
 .panel{
   width:150px;display:flex;flex-direction:column;gap:8px;justify-content:center;
@@ -85,9 +88,11 @@ canvas{display:block;max-width:min(896px,92vw);height:auto}
   background:radial-gradient(120% 120% at 50% 45%, transparent 55%, rgba(0,0,0,.55) 100%);
 }
 .overlay{
-  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:14px;background:rgba(3,7,4,.86);backdrop-filter:blur(2px);z-index:10;text-align:center;
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+  gap:14px;background:rgba(3,7,4,.86);backdrop-filter:blur(2px);z-index:10;text-align:center;overflow:auto;
 }
+.overlay > :first-child{margin-top:auto}
+.overlay > :last-child{margin-bottom:auto}
 .hidden{display:none !important}
 .ovTitle{
   font-family:'Bungee',cursive;font-size:56px;line-height:1;color:#eaffe0;
@@ -111,6 +116,22 @@ canvas{display:block;max-width:min(896px,92vw);height:auto}
 .controls{margin-top:14px;font-size:18px;color:var(--uidim);line-height:1.7;letter-spacing:1px}
 .controls b{color:#c9f7b4;font-weight:normal}
 .controls .vs{color:var(--p2)}
+.cfgBlock{display:flex;flex-direction:column;gap:8px;align-items:center}
+.cfgTitle{font-size:15px;letter-spacing:3px;color:var(--uidim)}
+.cfgNote{font-size:14px;letter-spacing:1px;color:#3c5c44;max-width:420px;line-height:1.4}
+.pRow{display:flex;align-items:center;gap:8px}
+.pTag{width:30px;text-align:center;font-size:16px;letter-spacing:1px;border-radius:4px;border:1px solid}
+.pTag.t1{color:var(--p1);border-color:var(--p1dim)}
+.pTag.t2{color:var(--p2);border-color:var(--p2dim)}
+.pRow input,.pRow select{
+  font-family:'VT323',monospace;font-size:17px;background:#0a140c;color:var(--uifg);
+  border:1px solid #2c4a33;border-radius:5px;padding:3px 8px;outline:none;
+}
+.pRow input{width:128px}
+.pRow select{max-width:150px}
+.pRow input:focus,.pRow select:focus{border-color:var(--p1)}
+.flagPrev{height:13px;border-radius:2px;display:none}
+.hudFlag{height:12px;vertical-align:-1px;margin-right:6px;border-radius:1px;display:none}
 .banner{
   position:absolute;left:0;right:0;top:38%;z-index:9;pointer-events:none;text-align:center;
   font-family:'Bungee',cursive;font-size:42px;letter-spacing:3px;opacity:0;transition:opacity .15s;
@@ -142,6 +163,9 @@ footer b{color:#6f9a72;font-weight:normal}
   .panel .label{margin-top:0}
   .ovTitle{font-size:38px}
   #countdown{font-size:90px}
+  .pRow input{width:104px}
+  .pRow select{max-width:112px;font-size:15px}
+  .cfgNote{max-width:88vw}
 }
 </style>
 </head>
@@ -152,11 +176,17 @@ footer b{color:#6f9a72;font-weight:normal}
   <header>
     <h1>SNAKE ARENA</h1>
     <span class="sub">2D SERPENT BATTLE</span>
-    <button id="btnSound">SOUND: ON</button>
+    <div class="hudCtrls">
+      <button id="btnWalls" class="hudBtn">WALLS: DEADLY</button>
+      <button id="spdDown" class="hudBtn sq">-</button>
+      <span id="spdHud" class="hudInd">SPEED 1x</span>
+      <button id="spdUp" class="hudBtn sq">+</button>
+      <button id="btnSound" class="hudBtn">SOUND: ON</button>
+    </div>
   </header>
   <div class="cabinet">
     <aside class="panel p1">
-      <div class="name" id="name1">PLAYER 1</div>
+      <div class="name"><img id="hudFlag1" class="hudFlag" alt=""><span id="name1">PLAYER 1</span></div>
       <div class="label">SCORE</div><div class="val" id="score1">0</div>
       <div class="label">LENGTH</div><div class="val" id="len1">4</div>
       <div class="label">ROUNDS</div>
@@ -174,9 +204,26 @@ footer b{color:#6f9a72;font-weight:normal}
           <button class="mbtn" id="btnSolo"><span class="k">1</span>SOLO VS CPU</button>
           <button class="mbtn" id="btnDuo"><span class="k">2</span>LOCAL DUEL</button>
         </div>
+        <div class="cfgBlock">
+          <div class="cfgTitle">SNAKE CUSTOMIZATION</div>
+          <div class="pRow">
+            <span class="pTag t1">P1</span>
+            <input id="nameIn1" maxlength="12" placeholder="PLAYER 1" autocomplete="off" spellcheck="false">
+            <select id="flagSel1"></select>
+            <img id="flagPrev1" class="flagPrev" alt="">
+          </div>
+          <div class="pRow">
+            <span class="pTag t2">P2</span>
+            <input id="nameIn2" maxlength="12" placeholder="PLAYER 2" autocomplete="off" spellcheck="false">
+            <select id="flagSel2"></select>
+            <img id="flagPrev2" class="flagPrev" alt="">
+          </div>
+          <div class="cfgNote">OPTIONAL FLOATING NAME + COUNTRY FLAG PER SNAKE · SAVED FOR NEXT TIME · P2 ROW RENAMES THE CPU IN SOLO</div>
+        </div>
         <div class="controls">
           <b>P1</b> W A S D &nbsp;+&nbsp; L-SHIFT BOOST &nbsp;&nbsp;<span class="vs">//</span>&nbsp;&nbsp; <b>P2</b> ARROWS + R-SHIFT BOOST<br>
-          BOOST BURNS YOUR TAIL · FIRST TO <b>3 ROUNDS</b> TAKES THE ARENA
+          BOOST BURNS YOUR TAIL · FIRST TO <b>3 ROUNDS</b> TAKES THE ARENA<br>
+          <b>- / +</b> SPEED &nbsp;·&nbsp; <b>X</b> WALLS &nbsp;·&nbsp; <b>P</b> PAUSE &nbsp;·&nbsp; <b>M</b> SOUND
         </div>
       </div>
       <div id="pauseOv" class="overlay hidden">
@@ -193,14 +240,14 @@ footer b{color:#6f9a72;font-weight:normal}
       </div>
     </div>
     <aside class="panel p2">
-      <div class="name" id="name2">PLAYER 2</div>
+      <div class="name"><img id="hudFlag2" class="hudFlag" alt=""><span id="name2">PLAYER 2</span></div>
       <div class="label">SCORE</div><div class="val" id="score2">0</div>
       <div class="label">LENGTH</div><div class="val" id="len2">4</div>
       <div class="label">ROUNDS</div>
       <div class="pips" id="pips2"><span class="pip"></span><span class="pip"></span><span class="pip"></span></div>
     </aside>
   </div>
-  <footer><b>WASD</b> / <b>ARROWS</b> MOVE &nbsp;·&nbsp; <b>SHIFT</b> BOOST &nbsp;·&nbsp; <b>P</b> PAUSE &nbsp;·&nbsp; <b>M</b> SOUND &nbsp;·&nbsp; EAT AMBER · GRAB GOLD</footer>
+  <footer><b>WASD</b> / <b>ARROWS</b> MOVE &nbsp;·&nbsp; <b>SHIFT</b> BOOST &nbsp;·&nbsp; <b>-/+</b> SPEED &nbsp;·&nbsp; <b>X</b> WALLS &nbsp;·&nbsp; <b>P</b> PAUSE &nbsp;·&nbsp; <b>M</b> SOUND &nbsp;·&nbsp; EAT AMBER · GRAB GOLD</footer>
 </div>
 <script>
 (() => {
@@ -217,8 +264,13 @@ const el = {
   banner: $('banner'), countdown: $('countdown'), cdNum: $('cdNum'),
   score1: $('score1'), score2: $('score2'), len1: $('len1'), len2: $('len2'),
   name1: $('name1'), name2: $('name2'),
+  hudFlag1: $('hudFlag1'), hudFlag2: $('hudFlag2'),
   pips1: $('pips1').children, pips2: $('pips2').children,
-  btnSound: $('btnSound')
+  btnSound: $('btnSound'), btnWalls: $('btnWalls'), spdHud: $('spdHud'),
+  spdDown: $('spdDown'), spdUp: $('spdUp'),
+  nameIn1: $('nameIn1'), nameIn2: $('nameIn2'),
+  flagSel1: $('flagSel1'), flagSel2: $('flagSel2'),
+  flagPrev1: $('flagPrev1'), flagPrev2: $('flagPrev2')
 };
 const DIRS = { up:{x:0,y:-1}, down:{x:0,y:1}, left:{x:-1,y:0}, right:{x:1,y:0} };
 const DIRLIST = [DIRS.up, DIRS.down, DIRS.left, DIRS.right];
@@ -270,13 +322,121 @@ const sfx = {
   boostTick() { beep(180, 0.05, 'triangle', 0.03); }
 };
 
+const SPEED_MIN = 0.5, SPEED_MAX = 2.5, SPEED_STEP = 0.25;
+const settings = { wrap: false, speed: 1, names: ['', ''], flags: ['', ''] };
+const FLAGS = [
+  ['', 'NO FLAG'],
+  ['eg','Egypt'],['sa','Saudi Arabia'],['ae','UAE'],['ma','Morocco'],['dz','Algeria'],['tn','Tunisia'],['ly','Libya'],['sd','Sudan'],['iq','Iraq'],['jo','Jordan'],['lb','Lebanon'],['sy','Syria'],['ye','Yemen'],['kw','Kuwait'],['qa','Qatar'],['om','Oman'],['bh','Bahrain'],['ps','Palestine'],['tr','Turkey'],['ir','Iran'],['il','Israel'],
+  ['us','USA'],['gb','UK'],['ca','Canada'],['mx','Mexico'],['br','Brazil'],['ar','Argentina'],['cl','Chile'],['co','Colombia'],['pe','Peru'],
+  ['de','Germany'],['fr','France'],['it','Italy'],['es','Spain'],['pt','Portugal'],['nl','Netherlands'],['be','Belgium'],['ch','Switzerland'],['at','Austria'],['se','Sweden'],['no','Norway'],['dk','Denmark'],['fi','Finland'],['is','Iceland'],['ie','Ireland'],['pl','Poland'],['ua','Ukraine'],['ru','Russia'],['gr','Greece'],['ro','Romania'],['cz','Czechia'],['hu','Hungary'],['rs','Serbia'],['hr','Croatia'],['xk','Kosovo'],
+  ['in','India'],['pk','Pakistan'],['bd','Bangladesh'],['cn','China'],['jp','Japan'],['kr','South Korea'],['vn','Vietnam'],['th','Thailand'],['ph','Philippines'],['id','Indonesia'],['my','Malaysia'],['sg','Singapore'],['np','Nepal'],['lk','Sri Lanka'],['af','Afghanistan'],['kz','Kazakhstan'],['uz','Uzbekistan'],
+  ['au','Australia'],['nz','New Zealand'],
+  ['ng','Nigeria'],['ke','Kenya'],['gh','Ghana'],['et','Ethiopia'],['tz','Tanzania'],['za','South Africa'],['sn','Senegal'],['cm','Cameroon'],['ci','Ivory Coast'],['ml','Mali'],['ne','Niger'],['so','Somalia']
+];
+const flagCache = {};
+function flagImg(code) {
+  if (!code) return null;
+  if (!flagCache[code]) {
+    const im = new Image();
+    im.src = 'https://flagcdn.com/w40/' + code + '.png';
+    flagCache[code] = im;
+  }
+  return flagCache[code];
+}
+function customName(i) { return (settings.names[i] || '').trim(); }
+function displayName(i) { return customName(i) || (i === 0 ? 'PLAYER 1' : (mode === 'ai' ? 'CPU' : 'PLAYER 2')); }
+function fmtSpeed() { return settings.speed.toFixed(2).replace(/\.?0+$/, '') + 'x'; }
+function torDist(ax, ay, bx, by) {
+  let dx = Math.abs(ax - bx), dy = Math.abs(ay - by);
+  if (settings.wrap) { if (dx > COLS / 2) dx = COLS - dx; if (dy > ROWS / 2) dy = ROWS - dy; }
+  return dx + dy;
+}
+function saveSettings() { try { localStorage.setItem('snakeArenaCfg', JSON.stringify(settings)); } catch (e) {} }
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem('snakeArenaCfg');
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    if (typeof d.wrap === 'boolean') settings.wrap = d.wrap;
+    if (typeof d.speed === 'number') settings.speed = Math.min(SPEED_MAX, Math.max(SPEED_MIN, Math.round(d.speed * 4) / 4));
+    if (Array.isArray(d.names)) settings.names = [String(d.names[0] || '').slice(0, 12), String(d.names[1] || '').slice(0, 12)];
+    if (Array.isArray(d.flags)) settings.flags = [String(d.flags[0] || '').toLowerCase(), String(d.flags[1] || '').toLowerCase()];
+  } catch (e) {}
+}
+function updateHudNames() {
+  if (!snakes.length) return;
+  for (let i = 0; i < 2; i++) {
+    el['name' + (i + 1)].textContent = displayName(i);
+    const img = el['hudFlag' + (i + 1)], code = settings.flags[i];
+    if (code) { img.src = 'https://flagcdn.com/w20/' + code + '.png'; img.style.display = 'inline'; }
+    else { img.style.display = 'none'; img.removeAttribute('src'); }
+  }
+}
+function applySettingsUI() {
+  el.btnWalls.textContent = 'WALLS: ' + (settings.wrap ? 'OFF' : 'DEADLY');
+  el.spdHud.textContent = 'SPEED ' + fmtSpeed();
+  for (let i = 0; i < 2; i++) {
+    const nameIn = el['nameIn' + (i + 1)], sel = el['flagSel' + (i + 1)], prev = el['flagPrev' + (i + 1)];
+    nameIn.value = settings.names[i];
+    if (![...sel.options].some(o => o.value === settings.flags[i])) settings.flags[i] = '';
+    sel.value = settings.flags[i];
+    if (settings.flags[i]) {
+      prev.src = 'https://flagcdn.com/w40/' + settings.flags[i] + '.png';
+      prev.style.display = 'inline';
+      flagImg(settings.flags[i]);
+    } else {
+      prev.removeAttribute('src');
+      prev.style.display = 'none';
+    }
+  }
+  updateHudNames();
+}
+function setSpeed(v) {
+  settings.speed = Math.min(SPEED_MAX, Math.max(SPEED_MIN, Math.round(v * 4) / 4));
+  applySettingsUI(); saveSettings();
+  if (state === 'playing' || state === 'countdown') showBanner('SPEED ' + fmtSpeed(), '', 'cd', 0.6);
+}
+function toggleWalls() {
+  settings.wrap = !settings.wrap;
+  applySettingsUI(); saveSettings();
+  if (state === 'playing' || state === 'countdown') showBanner(settings.wrap ? 'WALLS OFF - WRAP AROUND' : 'WALLS DEADLY', '', 'cd', 0.6);
+}
+function bindCfg(i) {
+  const nameIn = el['nameIn' + (i + 1)], sel = el['flagSel' + (i + 1)], prev = el['flagPrev' + (i + 1)];
+  nameIn.addEventListener('input', () => {
+    settings.names[i] = nameIn.value.slice(0, 12);
+    saveSettings(); if (snakes.length) updateHudNames();
+  });
+  sel.addEventListener('change', () => {
+    settings.flags[i] = sel.value;
+    if (sel.value) {
+      prev.src = 'https://flagcdn.com/w40/' + sel.value + '.png';
+      prev.style.display = 'inline';
+      flagImg(sel.value);
+    } else {
+      prev.removeAttribute('src');
+      prev.style.display = 'none';
+    }
+    saveSettings(); if (snakes.length) updateHudNames();
+  });
+}
+function populateFlagSelects() {
+  for (const [code, label] of FLAGS) {
+    for (const sel of [el.flagSel1, el.flagSel2]) {
+      const o = document.createElement('option');
+      o.value = code; o.textContent = label;
+      sel.appendChild(o);
+    }
+  }
+}
+
 function makeSnake(idx, x, y, dirKey, colorA, colorB, headColor) {
   const d = DIRS[dirKey];
   const body = [];
   for (let i = 0; i < 4; i++) body.push({ x: x - d.x * i, y: y - d.y * i });
   return {
-    idx, body, dir: d, queue: [], growth: 0, score: 0, wins: 0, alive: true,
-    isAI: false, moveAcc: 0, boosting: false, boostSteps: 0,
+    idx, body, prevBody: null, dir: d, queue: [], growth: 0, score: 0, wins: 0, alive: true,
+    isAI: false, moveAcc: 0, moveInterval: BASE_MS, boosting: false, boostSteps: 0,
     colorA, colorB, headColor
   };
 }
@@ -287,8 +447,7 @@ function startMatch(m) {
     makeSnake(1, COLS - 7, Math.floor(ROWS / 2), 'left', '#ff3d8f', '#6e1538', '#ff9ec8')
   ];
   snakes[1].isAI = m === 'ai';
-  el.name1.textContent = 'PLAYER 1';
-  el.name2.textContent = m === 'ai' ? 'CPU' : 'PLAYER 2';
+  updateHudNames();
   startRound();
 }
 function startRound() {
@@ -364,21 +523,22 @@ function aiDir(s) {
   for (const d of DIRLIST) {
     if (d.x === -s.dir.x && d.y === -s.dir.y) continue;
     const nh = { x: head.x + d.x, y: head.y + d.y };
-    if (nh.x < 0 || nh.y < 0 || nh.x >= COLS || nh.y >= ROWS) continue;
+    if (settings.wrap) { nh.x = (nh.x + COLS) % COLS; nh.y = (nh.y + ROWS) % ROWS; }
+    else if (nh.x < 0 || nh.y < 0 || nh.x >= COLS || nh.y >= ROWS) continue;
     const occ = occupiedSet(s);
     if (occ.has(nh.x + ',' + nh.y)) continue;
     let space = floodCount(nh, occ, 170);
     let sc = space * 14;
     let target = null, td = 1e9;
     for (const f of foods) {
-      const dd = Math.abs(f.x - nh.x) + Math.abs(f.y - nh.y);
+      const dd = torDist(f.x, f.y, nh.x, nh.y);
       const w = f.gold ? dd - 4 : dd;
       if (w < td) { td = w; target = f; }
     }
     sc -= (target ? td : 40) * 16;
     if (target && nh.x === target.x && nh.y === target.y) sc += target.gold ? 500 : 200;
     if (opp.alive) {
-      const hd = Math.abs(opp.body[0].x - nh.x) + Math.abs(opp.body[0].y - nh.y);
+      const hd = torDist(opp.body[0].x, opp.body[0].y, nh.x, nh.y);
       if (hd === 1 && opp.body.length >= s.body.length) sc -= 4000;
       if (hd <= 2 && opp.body.length > s.body.length) sc -= 800;
     }
@@ -396,8 +556,10 @@ function floodCount(start, occ, cap) {
   while (q.length && n < cap) {
     const c = q.shift(); n++;
     for (const d of DIRLIST) {
-      const nx = c.x + d.x, ny = c.y + d.y, k = nx + ',' + ny;
-      if (nx < 0 || ny < 0 || nx >= COLS || ny >= ROWS) continue;
+      let nx = c.x + d.x, ny = c.y + d.y;
+      if (settings.wrap) { nx = (nx + COLS) % COLS; ny = (ny + ROWS) % ROWS; }
+      else if (nx < 0 || ny < 0 || nx >= COLS || ny >= ROWS) continue;
+      const k = nx + ',' + ny;
       if (seen.has(k) || occ.has(k)) continue;
       seen.add(k); q.push({ x: nx, y: ny });
     }
@@ -410,7 +572,7 @@ function stepSnake(s) {
     const d = aiDir(s);
     if (d) s.queue = [d];
     s.wantBoost = s.body.length > 8 && foods.length > 0 &&
-      Math.min(...foods.map(f => Math.abs(f.x - s.body[0].x) + Math.abs(f.y - s.body[0].y))) > 6 &&
+      Math.min(...foods.map(f => torDist(f.x, f.y, s.body[0].x, s.body[0].y))) > 6 &&
       floodCount(s.body[0], occupiedSet(s), 200) > 90;
   } else {
     s.wantBoost = boostKeyPressed(s.idx) && s.body.length > 5;
@@ -423,9 +585,13 @@ function stepSnake(s) {
   }
   const head = s.body[0];
   const nh = { x: head.x + s.dir.x, y: head.y + s.dir.y };
-  if (nh.x < 0 || nh.y < 0 || nh.x >= COLS || nh.y >= ROWS) { kill(s); return; }
+  if (settings.wrap) {
+    nh.x = (nh.x + COLS) % COLS;
+    nh.y = (nh.y + ROWS) % ROWS;
+  } else if (nh.x < 0 || nh.y < 0 || nh.x >= COLS || nh.y >= ROWS) { kill(s); return; }
   const occ = occupiedSet(s);
   if (occ.has(nh.x + ',' + nh.y)) { kill(s); return; }
+  s.prevBody = s.body.map(c => ({ x: c.x, y: c.y }));
   s.body.unshift(nh);
   if (s.growth > 0) s.growth--;
   else s.body.pop();
@@ -479,7 +645,7 @@ function endRound() {
   roundWinner = alive.length === 1 ? alive[0] : null;
   if (roundWinner) {
     roundWinner.wins++;
-    showBanner((roundWinner.idx === 0 ? 'PLAYER 1' : (mode === 'ai' ? 'CPU' : 'PLAYER 2')) + ' TAKES THE ROUND',
+    showBanner(displayName(roundWinner.idx).toUpperCase() + ' TAKES THE ROUND',
       'ROUNDS ' + snakes[0].wins + ' — ' + snakes[1].wins, roundWinner.idx === 0 ? 'c1' : 'c2', 1.9);
     sfx.win();
   } else {
@@ -493,7 +659,10 @@ function gameOver() {
   state = 'gameover';
   const w = snakes[0].wins >= WIN_ROUNDS ? snakes[0] : snakes[1];
   const youWin = w.idx === 0;
-  el.overTitle.textContent = mode === 'ai' ? (youWin ? 'YOU WIN' : 'CPU WINS') : (w.idx === 0 ? 'PLAYER 1 WINS' : 'PLAYER 2 WINS');
+  const cn = customName(w.idx);
+  el.overTitle.textContent = mode === 'ai'
+    ? (youWin ? (cn ? cn.toUpperCase() + ' WINS' : 'YOU WIN') : (cn ? cn.toUpperCase() + ' WINS' : 'CPU WINS'))
+    : displayName(w.idx).toUpperCase() + ' WINS';
   el.overTitle.className = 'ovTitle ' + (youWin ? 'win' : 'lose');
   el.overStats.innerHTML =
     '<span class="a">' + snakes[0].score + '</span> &nbsp;—&nbsp; <span class="b">' + snakes[1].score + '</span><br>' +
@@ -562,7 +731,11 @@ function update(dt) {
     for (const s of snakes) {
       if (!s.alive) continue;
       s.moveAcc += dt * 1000;
-      const interval = BASE_MS / (s.wantBoost ? 2 : 1);
+      const interval = BASE_MS / settings.speed / (s.wantBoost ? 2 : 1);
+      if (s.moveInterval !== interval) {
+        if (s.moveInterval) s.moveAcc = s.moveAcc * interval / s.moveInterval;
+        s.moveInterval = interval;
+      }
       while (s.alive && state === 'playing' && s.moveAcc >= interval) {
         s.moveAcc -= interval;
         stepSnake(s);
@@ -570,6 +743,7 @@ function update(dt) {
     }
     if (state === 'playing' && (!snakes[0].alive || !snakes[1].alive)) endRound();
   } else if (state === 'roundover') {
+    for (const s of snakes) if (s.alive && s.moveInterval) s.moveAcc = Math.min(s.moveAcc + dt * 1000, s.moveInterval);
     roundT -= dt;
     if (roundT <= 0) {
       if (snakes[0].wins >= WIN_ROUNDS || snakes[1].wins >= WIN_ROUNDS) gameOver();
@@ -605,6 +779,27 @@ function hexToRgb(h) {
 function mix(a, b, t) {
   return 'rgb(' + Math.round(a[0] + (b[0] - a[0]) * t) + ',' + Math.round(a[1] + (b[1] - a[1]) * t) + ',' + Math.round(a[2] + (b[2] - a[2]) * t) + ')';
 }
+function interpT(s) {
+  if (!s.moveInterval) return 0;
+  return Math.max(0, Math.min(s.moveAcc / s.moveInterval, 1));
+}
+function lerpedCell(s, i, t) {
+  const b = s.body[i];
+  const p = s.prevBody && s.prevBody[i];
+  if (!p || t <= 0 || t >= 1) return { x: b.x, y: b.y };
+  if (s.prevBody.length > s.body.length && i === s.body.length - 1) return { x: b.x, y: b.y };
+  let dx = b.x - p.x, dy = b.y - p.y;
+  if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+    if (!settings.wrap) return { x: b.x, y: b.y };
+    if (dx > 1) dx -= COLS; else if (dx < -1) dx += COLS;
+    if (dy > 1) dy -= ROWS; else if (dy < -1) dy += ROWS;
+  }
+  return { x: p.x + dx * t, y: p.y + dy * t };
+}
+function headPix(s) {
+  const g = lerpedCell(s, 0, interpT(s));
+  return { x: (g.x + 0.5) * CELL, y: (g.y + 0.5) * CELL };
+}
 
 function draw(now) {
   ctx.save();
@@ -622,12 +817,14 @@ function draw(now) {
   ctx.stroke();
 
   const t = now / 1000;
-  ctx.strokeStyle = 'rgba(120,255,160,0.5)';
+  ctx.strokeStyle = settings.wrap ? 'rgba(255,179,71,0.55)' : 'rgba(120,255,160,0.5)';
   ctx.lineWidth = 2;
-  ctx.shadowColor = 'rgba(110,255,150,0.7)';
+  ctx.shadowColor = settings.wrap ? 'rgba(255,179,71,0.6)' : 'rgba(110,255,150,0.7)';
   ctx.shadowBlur = 10 + Math.sin(t * 2) * 4;
+  if (settings.wrap) ctx.setLineDash([12, 9]);
   rr(1.5, 1.5, W - 3, H - 3, 10);
   ctx.stroke();
+  ctx.setLineDash([]);
   ctx.shadowBlur = 0;
 
   for (const f of foods) {
@@ -672,8 +869,9 @@ function draw(now) {
     if (!s.alive) continue;
     const n = s.body.length;
     const ca = hexToRgb(s.colorA), cb = hexToRgb(s.colorB);
+    const t = interpT(s);
     for (let i = n - 1; i >= 0; i--) {
-      const b = s.body[i];
+      const g = lerpedCell(s, i, t);
       const c = i === 0 ? s.headColor : mix(ca, cb, i / Math.max(n - 1, 1));
       const shrink = i === 0 ? 1 : 1 - (i / n) * 0.28;
       const pad = (CELL - (CELL - 5) * shrink) / 2;
@@ -682,21 +880,35 @@ function draw(now) {
         ctx.shadowColor = i === 0 ? s.headColor : s.colorA;
         ctx.shadowBlur = i === 0 ? 16 : 9;
       }
-      rr(b.x * CELL + pad, b.y * CELL + pad, CELL - pad * 2, CELL - pad * 2, 7);
+      const sx = g.x * CELL + pad, sy = g.y * CELL + pad;
+      const sw = CELL - pad * 2, sh2 = CELL - pad * 2;
+      rr(sx, sy, sw, sh2, 7);
       ctx.fill();
+      if (settings.wrap && (sx < 0 || sy < 0 || sx + sw > W || sy + sh2 > H)) {
+        if (sx < 0) { rr(sx + W, sy, sw, sh2, 7); ctx.fill(); }
+        else if (sx + sw > W) { rr(sx - W, sy, sw, sh2, 7); ctx.fill(); }
+        if (sy < 0) { rr(sx, sy + H, sw, sh2, 7); ctx.fill(); }
+        else if (sy + sh2 > H) { rr(sx, sy - H, sw, sh2, 7); ctx.fill(); }
+      }
       ctx.shadowBlur = 0;
     }
-    const h = s.body[0];
-    const hx = (h.x + 0.5) * CELL, hy = (h.y + 0.5) * CELL;
+    const hp = headPix(s);
     const d = s.dir;
     const pxp = -d.y, pyp = d.x;
-    for (const side of [-1, 1]) {
-      const ex = hx + d.x * 4.5 + pxp * side * 6;
-      const ey = hy + d.y * 4.5 + pyp * side * 6;
-      ctx.fillStyle = '#f4fff0';
-      ctx.beginPath(); ctx.arc(ex, ey, 3.4, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#0a140a';
-      ctx.beginPath(); ctx.arc(ex + d.x * 1.4, ey + d.y * 1.4, 1.7, 0, Math.PI * 2); ctx.fill();
+    const offs = [[0, 0]];
+    if (settings.wrap) {
+      if (hp.x < CELL / 2) offs.push([W, 0]); else if (hp.x > W - CELL / 2) offs.push([-W, 0]);
+      if (hp.y < CELL / 2) offs.push([0, H]); else if (hp.y > H - CELL / 2) offs.push([0, -H]);
+    }
+    for (const [ox, oy] of offs) {
+      for (const side of [-1, 1]) {
+        const ex = hp.x + d.x * 4.5 + pxp * side * 6 + ox;
+        const ey = hp.y + d.y * 4.5 + pyp * side * 6 + oy;
+        ctx.fillStyle = '#f4fff0';
+        ctx.beginPath(); ctx.arc(ex, ey, 3.4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#0a140a';
+        ctx.beginPath(); ctx.arc(ex + d.x * 1.4, ey + d.y * 1.4, 1.7, 0, Math.PI * 2); ctx.fill();
+      }
     }
   }
 
@@ -719,14 +931,16 @@ function draw(now) {
   if (state === 'playing' && snakes.length) {
     for (const s of snakes) {
       if (s.boosting && s.alive) {
+        const bp = headPix(s);
         ctx.globalAlpha = 0.25;
         ctx.font = '16px VT323, monospace';
         ctx.fillStyle = s.colorA;
-        ctx.fillText('BOOST', (s.body[0].x + 0.5) * CELL, (s.body[0].y - 0.5) * CELL - 6);
+        ctx.fillText('BOOST', bp.x, bp.y - 34);
         ctx.globalAlpha = 1;
       }
     }
   }
+  if (snakes.length && state !== 'menu' && state !== 'gameover') drawSnakeLabels();
   ctx.restore();
   updateHud();
 }
@@ -741,6 +955,33 @@ function updateHud() {
     el.pips2[i].className = 'pip' + (i < snakes[1].wins ? ' on' : '');
   }
 }
+function drawSnakeLabels() {
+  for (const s of snakes) {
+    if (!s.alive) continue;
+    const name = customName(s.idx);
+    const flag = settings.flags[s.idx];
+    if (!name && !flag) continue;
+    const hp = headPix(s);
+    const hx = hp.x;
+    let ly = hp.y - 23;
+    if (ly < 15) ly = hp.y + 31;
+    const im = flag ? flagImg(flag) : null;
+    const hasImg = im && im.complete && im.naturalWidth > 0;
+    const fh = 12, fw = hasImg ? Math.round(fh * im.naturalWidth / im.naturalHeight) : 0;
+    ctx.font = '17px VT323, monospace';
+    const tw = name ? ctx.measureText(name).width : 0;
+    const gap = (hasImg && name) ? 5 : 0;
+    const startX = hx - ((hasImg ? fw : 0) + gap + tw) / 2;
+    if (hasImg) ctx.drawImage(im, startX, ly - fh, fw, fh);
+    if (name) {
+      ctx.shadowColor = s.headColor;
+      ctx.shadowBlur = 7;
+      ctx.fillStyle = '#eaffdc';
+      ctx.fillText(name, startX + (hasImg ? fw + gap : 0) + tw / 2, ly);
+      ctx.shadowBlur = 0;
+    }
+  }
+}
 
 let lastT = performance.now();
 function loop(now) {
@@ -753,11 +994,16 @@ function loop(now) {
 }
 
 window.addEventListener('keydown', e => {
+  const tag = e.target && e.target.tagName;
+  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
   audio();
   if (e.repeat) { keys.add(e.code); return; }
   keys.add(e.code);
   if (e.code === 'KeyM') { toggleSound(); return; }
+  if (e.code === 'Minus' || e.code === 'NumpadSubtract') { setSpeed(settings.speed - SPEED_STEP); return; }
+  if (e.code === 'Equal' || e.code === 'NumpadAdd') { setSpeed(settings.speed + SPEED_STEP); return; }
+  if (e.code === 'KeyX') { toggleWalls(); return; }
   if (state === 'menu') {
     if (e.code === 'Digit1' || e.code === 'Numpad1') startMatch('ai');
     if (e.code === 'Digit2' || e.code === 'Numpad2') startMatch('duo');
@@ -796,6 +1042,15 @@ $('btnDuo').addEventListener('click', () => { audio(); startMatch('duo'); });
 $('btnRematch').addEventListener('click', () => startMatch(mode));
 $('btnMenu').addEventListener('click', toMenu);
 el.btnSound.addEventListener('click', toggleSound);
+el.btnWalls.addEventListener('click', toggleWalls);
+el.spdDown.addEventListener('click', () => setSpeed(settings.speed - SPEED_STEP));
+el.spdUp.addEventListener('click', () => setSpeed(settings.speed + SPEED_STEP));
+document.querySelectorAll('button').forEach(b => b.addEventListener('click', () => b.blur()));
+
+populateFlagSelects();
+loadSettings();
+bindCfg(0); bindCfg(1);
+applySettingsUI();
 
 requestAnimationFrame(loop);
 })();
